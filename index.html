@@ -486,6 +486,7 @@
                         </div>
                         <div class="file-item-actions">
                             <button class="btn-small" onclick="viewFile(${file.id})">👁️ Ver</button>
+                            <button class="btn-small" onclick="downloadFile(${file.id}, '${file.title}')">⬇️ Descargar</button>
                             <button class="btn-small btn-small-delete" onclick="deleteConversation(${file.id})">🗑️ Eliminar</button>
                         </div>
                     </div>
@@ -530,30 +531,47 @@
         function viewFile(id) {
             const file = conversations.find(c => c.id === id);
             if (file) {
-                const card = document.getElementById(`card-${id}`);
+                // Scroll hacia arriba
+                window.scrollTo(0, 0);
+                
+                // Crear o actualizar la tarjeta de vista
+                let card = document.getElementById(`card-${id}`);
+                
                 if (!card) {
-                    // Si no existe la tarjeta, la creamos
                     const container = document.getElementById('conversations');
-                    const newCard = document.createElement('div');
-                    newCard.id = `card-${id}`;
-                    newCard.className = 'conversation-card';
-                    newCard.innerHTML = `
-                        <div class="conversation-header">
-                            <div>
-                                <div class="conversation-title">${file.title}</div>
-                                <div class="conversation-meta">
-                                    <span>📄 ${file.ia}</span>
-                                    <span>📅 ${file.date}</span>
-                                </div>
-                            </div>
-                            <div class="btn-group">
-                                <button class="btn-delete" onclick="deleteConversation(${file.id})">🗑️ Eliminar</button>
+                    card = document.createElement('div');
+                    card.id = `card-${id}`;
+                    container.insertBefore(card, container.firstChild);
+                }
+                
+                card.className = 'conversation-card';
+                card.innerHTML = `
+                    <div class="conversation-header">
+                        <div>
+                            <div class="conversation-title">📄 ${file.title}</div>
+                            <div class="conversation-meta">
+                                <span>📅 ${file.date}</span>
                             </div>
                         </div>
-                        <div class="conversation-content">${file.content}</div>
-                    `;
-                    container.insertBefore(newCard, container.firstChild);
-                }
+                        <div class="btn-group">
+                            <button class="btn-delete" onclick="deleteConversation(${file.id})">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                    <div class="conversation-content">${file.content.substring(0, 5000)}</div>
+                `;
+            }
+        }
+
+        function downloadFile(id, filename) {
+            const file = conversations.find(c => c.id === id);
+            if (file) {
+                const element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(file.content));
+                element.setAttribute('download', filename + '.txt');
+                element.style.display = 'none';
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element);
             }
         }
 
