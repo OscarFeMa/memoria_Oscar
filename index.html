@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Mis Conversaciones con IAs</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    
     <style>
         * {
             margin: 0;
@@ -334,8 +339,10 @@
         <div class="conversations-list" id="conversations"></div>
 
         <footer>
-            <p>💾 Tus conversaciones se guardan en tu navegador (persisten entre sesiones)</p>
-            <p style="font-size: 0.85rem; color: #475569; margin-top: 0.5rem;">Para acceder desde otros dispositivos, descarga tus archivos</p>
+            <p>☁️ Tus conversaciones se guardan en la nube (accesibles desde cualquier dispositivo)</p>
+            <p style="font-size: 0.85rem; color: #475569; margin-top: 0.5rem;">
+                Memoria persistente activa - Sistema de continuidad de pensamiento
+            </p>
         </footer>
     </div>
 
@@ -343,203 +350,121 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         
+        // === CONFIGURACIÓN FIREBASE - REEMPLAZA CON TUS DATOS REALES ===
+        const firebaseConfig = {
+            apiKey: "TU-API-KEY-AQUI",
+            authDomain: "TU-AUTH-DOMAIN-AQUI",
+            projectId: "TU-PROJECT-ID-AQUI",
+            storageBucket: "TU-STORAGE-BUCKET-AQUI",
+            messagingSenderId: "TU-MESSAGING-SENDER-ID-AQUI",
+            appId: "TU-APP-ID-AQUI"
+        };
+
+        // Inicializar Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
         let conversations = [];
+        let isLoading = true;
 
         window.addEventListener('load', () => {
             loadConversations();
         });
 
-        function loadConversations() {
-            const stored = localStorage.getItem('conversaciones_ia_guardadas');
-            if (stored) {
-                try {
+        // === FUNCIONES MODIFICADAS PARA FIRESTORE ===
+
+        async function loadConversations() {
+            try {
+                showLoading(true);
+                const snapshot = await db.collection('conversaciones')
+                    .orderBy('timestamp', 'desc')
+                    .get();
+                
+                conversations = snapshot.docs.map(doc => ({
+                    id: doc.id,
+                    ...doc.data()
+                }));
+                
+                renderConversations();
+            } catch (error) {
+                console.error('Error cargando conversaciones:', error);
+                // Fallback a localStorage si Firebase falla
+                const stored = localStorage.getItem('conversaciones_ia_guardadas');
+                if (stored) {
                     conversations = JSON.parse(stored);
                     renderConversations();
-                } catch (error) {
-                    console.error('Error cargando conversaciones:', error);
-                    conversations = [];
                 }
+            } finally {
+                showLoading(false);
             }
         }
 
-        function saveConversations() {
-            try {
-                localStorage.setItem('conversaciones_ia_guardadas', JSON.stringify(conversations));
-            } catch (error) {
-                console.error('Error guardando:', error);
-                alert('No se pudo guardar. Tu navegador está lleno de datos.');
-            }
-        }
-
-        function addConversation() {
+        async function addConversation() {
             const title = document.getElementById('newTitle').value.trim();
             const ia = document.getElementById('newIa').value.trim();
             const content = document.getElementById('newContent').value.trim();
 
             if (title && content) {
-                const convo = {
-                    id: Date.now(),
-                    title: title,
-                    ia: ia || 'Sin especificar',
-                    content: content,
-                    date: new Date().toLocaleDateString('es-ES')
-                };
+                try {
+                    const convoData = {
+                        title: title,
+                        ia: ia || 'Sin especificar',
+                        content: content,
+                        date: new Date().toLocaleDateString('es-ES'),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                    };
 
-                conversations.unshift(convo);
-                saveConversations();
-                renderConversations();
-
-                document.getElementById('newTitle').value = '';
-                document.getElementById('newIa').value = '';
-                document.getElementById('newContent').value = '';
+                    const docRef = await db.collection('conversaciones').add(convoData);
+                    
+                    // Añadir a array local con el ID de Firestore
+                    conversations.unshift({
+                        id: docRef.id,
+                        ...convoData
+                    });
+                    
+                    renderConversations();
+                    clearForm();
+                    
+                } catch (error) {
+                    console.error('Error guardando:', error);
+                    alert('Error al guardar en la nube');
+                }
             } else {
                 alert('Por favor completa el título y contenido');
             }
         }
 
-        function deleteConversation(id) {
+        async function deleteConversation(id) {
             if (confirm('¿Estás seguro de que quieres eliminar esta conversación?')) {
-                conversations = conversations.filter(c => c.id !== id);
-                saveConversations();
-                renderConversations();
-            }
-        }
-
-        function startEdit(id) {
-            const convo = conversations.find(c => c.id === id);
-            const card = document.getElementById(`card-${id}`);
-            
-            card.innerHTML = `
-                <div class="edit-mode">
-                    <input type="text" value="${convo.title}" id="edit-title-${id}">
-                    <input type="text" value="${convo.ia}" id="edit-ia-${id}">
-                    <textarea id="edit-content-${id}">${convo.content}</textarea>
-                    <div class="btn-group">
-                        <button class="btn-save" onclick="saveEdit(${id})">✔️ Guardar</button>
-                        <button class="btn-cancel" onclick="cancelEdit(${id})">✖️ Cancelar</button>
-                    </div>
-                </div>
-            `;
-        }
-
-        function saveEdit(id) {
-            const convo = conversations.find(c => c.id === id);
-            convo.title = document.getElementById(`edit-title-${id}`).value;
-            convo.ia = document.getElementById(`edit-ia-${id}`).value;
-            convo.content = document.getElementById(`edit-content-${id}`).value;
-            
-            saveConversations();
-            renderConversations();
-        }
-
-        function cancelEdit(id) {
-            renderConversations();
-        }
-
-        function renderConversations() {
-            const container = document.getElementById('conversations');
-            const fileListSection = document.getElementById('fileListSection');
-            const fileListContainer = document.getElementById('fileListContainer');
-
-            // Filtrar archivos importados
-            const importedFiles = conversations.filter(c => c.ia === 'Importado');
-            
-            if (importedFiles.length > 0) {
-                fileListSection.style.display = 'block';
-                fileListContainer.innerHTML = importedFiles.map(file => `
-                    <div class="file-item">
-                        <div class="file-item-info">
-                            <div class="file-item-name">📄 ${file.title}</div>
-                            <div class="file-item-date">📅 ${file.date}</div>
-                        </div>
-                        <div class="file-item-actions">
-                            <button class="btn-small" onclick="viewFile(${file.id})">👁️ Ver</button>
-                            <button class="btn-small" onclick="downloadFile(${file.id}, '${file.title}')">⬇️ Descargar</button>
-                            <button class="btn-small btn-small-delete" onclick="deleteConversation(${file.id})">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                `).join('');
-            } else {
-                fileListSection.style.display = 'none';
-            }
-
-            // Mostrar conversaciones normales
-            const normalConvos = conversations.filter(c => c.ia !== 'Importado');
-            
-            if (normalConvos.length === 0) {
-                container.innerHTML = `
-                    <div class="empty-state">
-                        <p>Aún no hay conversaciones guardadas.</p>
-                        <p>¡Crea la primera!</p>
-                    </div>
-                `;
-                return;
-            }
-
-            container.innerHTML = normalConvos.map(convo => `
-                <div class="conversation-card" id="card-${convo.id}">
-                    <div class="conversation-header">
-                        <div>
-                            <div class="conversation-title">${convo.title}</div>
-                            <div class="conversation-meta">
-                                <span>🤖 ${convo.ia}</span>
-                                <span>📅 ${convo.date}</span>
-                            </div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn-edit" onclick="startEdit(${convo.id})">✏️ Editar</button>
-                            <button class="btn-delete" onclick="deleteConversation(${convo.id})">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                    <div class="conversation-content">${convo.content}</div>
-                </div>
-            `).join('');
-        }
-
-        function viewFile(id) {
-            const file = conversations.find(c => c.id === id);
-            if (file) {
-                // Scroll hacia arriba
-                window.scrollTo(0, 0);
-                
-                // Crear o actualizar la tarjeta de vista
-                let card = document.getElementById(`card-${id}`);
-                
-                if (!card) {
-                    const container = document.getElementById('conversations');
-                    card = document.createElement('div');
-                    card.id = `card-${id}`;
-                    container.insertBefore(card, container.firstChild);
+                try {
+                    await db.collection('conversaciones').doc(id).delete();
+                    conversations = conversations.filter(c => c.id !== id);
+                    renderConversations();
+                } catch (error) {
+                    console.error('Error eliminando:', error);
+                    alert('Error al eliminar de la nube');
                 }
-                
-                card.className = 'conversation-card';
-                card.innerHTML = `
-                    <div class="conversation-header">
-                        <div>
-                            <div class="conversation-title">📄 ${file.title}</div>
-                            <div class="conversation-meta">
-                                <span>📅 ${file.date}</span>
-                            </div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn-delete" onclick="deleteConversation(${file.id})">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                    <div class="conversation-content">${file.content.substring(0, 5000)}</div>
-                `;
             }
         }
 
-        function downloadFile(id, filename) {
-            const file = conversations.find(c => c.id === id);
-            if (file) {
-                const element = document.createElement('a');
-                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(file.content));
-                element.setAttribute('download', filename + '.txt');
-                element.style.display = 'none';
-                document.body.appendChild(element);
-                element.click();
-                document.body.removeChild(element);
+        async function saveEdit(id) {
+            const convo = conversations.find(c => c.id === id);
+            const updatedData = {
+                title: document.getElementById(`edit-title-${id}`).value,
+                ia: document.getElementById(`edit-ia-${id}`).value,
+                content: document.getElementById(`edit-content-${id}`).value
+            };
+
+            try {
+                await db.collection('conversaciones').doc(id).update(updatedData);
+                
+                // Actualizar localmente
+                Object.assign(convo, updatedData);
+                renderConversations();
+                
+            } catch (error) {
+                console.error('Error actualizando:', error);
+                alert('Error al actualizar en la nube');
             }
         }
 
@@ -565,24 +490,172 @@
                         continue;
                     }
 
-                    const convo = {
-                        id: Date.now() + Math.random(),
+                    const convoData = {
                         title: file.name.replace(/\.[^/.]+$/, ''),
                         ia: 'Importado',
                         content: content,
-                        date: new Date().toLocaleDateString('es-ES')
+                        date: new Date().toLocaleDateString('es-ES'),
+                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
                     };
 
-                    conversations.unshift(convo);
+                    const docRef = await db.collection('conversaciones').add(convoData);
+                    conversations.unshift({
+                        id: docRef.id,
+                        ...convoData
+                    });
+
                 } catch (error) {
                     console.error('Error procesando archivo:', error);
                     alert(`Error al procesar ${file.name}`);
                 }
             }
 
-            saveConversations();
             renderConversations();
             fileInput.value = '';
+        }
+
+        // === FUNCIONES DE UI (sin cambios) ===
+
+        function showLoading(loading) {
+            isLoading = loading;
+            const container = document.getElementById('conversations');
+            if (loading) {
+                container.innerHTML = '<div class="loading">🔄 Cargando conversaciones...</div>';
+            }
+        }
+
+        function clearForm() {
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newIa').value = '';
+            document.getElementById('newContent').value = '';
+        }
+
+        function startEdit(id) {
+            const convo = conversations.find(c => c.id === id);
+            const card = document.getElementById(`card-${id}`);
+            
+            card.innerHTML = `
+                <div class="edit-mode">
+                    <input type="text" value="${convo.title}" id="edit-title-${id}">
+                    <input type="text" value="${convo.ia}" id="edit-ia-${id}">
+                    <textarea id="edit-content-${id}">${convo.content}</textarea>
+                    <div class="btn-group">
+                        <button class="btn-save" onclick="saveEdit('${id}')">✔️ Guardar</button>
+                        <button class="btn-cancel" onclick="cancelEdit('${id}')">✖️ Cancelar</button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function cancelEdit(id) {
+            renderConversations();
+        }
+
+        function renderConversations() {
+            if (isLoading) return;
+            
+            const container = document.getElementById('conversations');
+            const fileListSection = document.getElementById('fileListSection');
+            const fileListContainer = document.getElementById('fileListContainer');
+
+            // Filtrar archivos importados
+            const importedFiles = conversations.filter(c => c.ia === 'Importado');
+            
+            if (importedFiles.length > 0) {
+                fileListSection.style.display = 'block';
+                fileListContainer.innerHTML = importedFiles.map(file => `
+                    <div class="file-item">
+                        <div class="file-item-info">
+                            <div class="file-item-name">📄 ${file.title}</div>
+                            <div class="file-item-date">📅 ${file.date}</div>
+                        </div>
+                        <div class="file-item-actions">
+                            <button class="btn-small" onclick="viewFile('${file.id}')">👁️ Ver</button>
+                            <button class="btn-small" onclick="downloadFile('${file.id}', '${file.title}')">⬇️ Descargar</button>
+                            <button class="btn-small btn-small-delete" onclick="deleteConversation('${file.id}')">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                fileListSection.style.display = 'none';
+            }
+
+            // Mostrar conversaciones normales
+            const normalConvos = conversations.filter(c => c.ia !== 'Importado');
+            
+            if (normalConvos.length === 0 && importedFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <p>Aún no hay conversaciones guardadas.</p>
+                        <p>¡Crea la primera!</p>
+                    </div>
+                `;
+                return;
+            }
+
+            container.innerHTML = normalConvos.map(convo => `
+                <div class="conversation-card" id="card-${convo.id}">
+                    <div class="conversation-header">
+                        <div>
+                            <div class="conversation-title">${convo.title}</div>
+                            <div class="conversation-meta">
+                                <span>🤖 ${convo.ia}</span>
+                                <span>📅 ${convo.date}</span>
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn-edit" onclick="startEdit('${convo.id}')">✏️ Editar</button>
+                            <button class="btn-delete" onclick="deleteConversation('${convo.id}')">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                    <div class="conversation-content">${convo.content}</div>
+                </div>
+            `).join('');
+        }
+
+        function viewFile(id) {
+            const file = conversations.find(c => c.id === id);
+            if (file) {
+                window.scrollTo(0, 0);
+                
+                let card = document.getElementById(`card-${id}`);
+                
+                if (!card) {
+                    const container = document.getElementById('conversations');
+                    card = document.createElement('div');
+                    card.id = `card-${id}`;
+                    container.insertBefore(card, container.firstChild);
+                }
+                
+                card.className = 'conversation-card';
+                card.innerHTML = `
+                    <div class="conversation-header">
+                        <div>
+                            <div class="conversation-title">📄 ${file.title}</div>
+                            <div class="conversation-meta">
+                                <span>📅 ${file.date}</span>
+                            </div>
+                        </div>
+                        <div class="btn-group">
+                            <button class="btn-delete" onclick="deleteConversation('${file.id}')">🗑️ Eliminar</button>
+                        </div>
+                    </div>
+                    <div class="conversation-content">${file.content.substring(0, 5000)}</div>
+                `;
+            }
+        }
+
+        function downloadFile(id, filename) {
+            const file = conversations.find(c => c.id === id);
+            if (file) {
+                const element = document.createElement('a');
+                element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(file.content));
+                element.setAttribute('download', filename + '.txt');
+                element.style.display = 'none';
+                document.body.appendChild(element);
+                element.click();
+                document.body.removeChild(element);
+            }
         }
 
         async function extractPdfText(file) {
