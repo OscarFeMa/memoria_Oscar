@@ -1,25 +1,10 @@
 ﻿{
-  "name": "memoria-oscar-web",
-  "version": "1.0.0",
-  "description": "Memoria no volátil para IA Oscar - Sistema global accesible",
-  "main": "backend/server_production.js",
+  "name": "memoria-oscar",
+  "version": "2.0.0",
   "scripts": {
-    "start": "node backend/server_production.js",
-    "dev": "node backend/server.js",
-    "build": "echo 'No build step necesario'",
-    "migrate": "node backend/migracion_cloud.js"
-  },
-  "dependencies": {
-    "express": "^4.18.2",
-    "sqlite3": "^5.1.6",
-    "pdf-parse": "^1.1.1",
-    "cors": "^2.8.5",
-    "helmet": "^7.1.0"
+    "start": "cd backend && node server_completo.js"
   },
   "engines": {
-    "node": ">=18.0.0"
-  },
-  "keywords": ["ia", "memoria", "conversaciones", "deepseek", "oscar"],
-  "author": "Ancla",
-  "license": "MIT"
+    "node": "18.x"
+  }
 }
