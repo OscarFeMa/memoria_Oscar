@@ -285,6 +285,55 @@
             background: #dc2626;
         }
 
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            border: 1px solid #334155;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .modal-title {
+            font-size: 1.5rem;
+            color: #f1f5f9;
+        }
+
+        .close-modal {
+            background: none;
+            border: none;
+            color: #94a3b8;
+            font-size: 1.5rem;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            color: #cbd5e1;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
         footer {
             text-align: center;
             color: #64748b;
@@ -338,6 +387,19 @@
 
         <div class="conversations-list" id="conversations"></div>
 
+        <!-- Modal para ver archivos -->
+        <div class="modal" id="fileModal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 class="modal-title" id="modalTitle">Título del archivo</h3>
+                    <button class="close-modal" onclick="closeModal()">✕</button>
+                </div>
+                <div class="modal-body" id="modalContent">
+                    Contenido del archivo...
+                </div>
+            </div>
+        </div>
+
         <footer>
             <p>☁️ Tus conversaciones se guardan en la nube (accesibles desde cualquier dispositivo)</p>
             <p style="font-size: 0.85rem; color: #475569; margin-top: 0.5rem;">
@@ -369,6 +431,7 @@
         let isLoading = true;
 
         window.addEventListener('load', () => {
+            console.log("Página cargada, cargando conversaciones...");
             loadConversations();
         });
 
@@ -376,24 +439,30 @@
 
         async function loadConversations() {
             try {
+                console.log("Cargando conversaciones desde Firebase...");
                 showLoading(true);
                 const snapshot = await db.collection('conversaciones')
                     .orderBy('timestamp', 'desc')
                     .get();
                 
+                console.log("Datos recibidos:", snapshot.docs.length, "documentos");
                 conversations = snapshot.docs.map(doc => ({
                     id: doc.id,
                     ...doc.data()
                 }));
                 
+                console.log("Conversaciones cargadas:", conversations);
                 renderConversations();
             } catch (error) {
                 console.error('Error cargando conversaciones:', error);
                 // Fallback a localStorage si Firebase falla
                 const stored = localStorage.getItem('conversaciones_ia_guardadas');
                 if (stored) {
+                    console.log("Usando datos de localStorage como fallback");
                     conversations = JSON.parse(stored);
                     renderConversations();
+                } else {
+                    console.log("No hay datos en localStorage");
                 }
             } finally {
                 showLoading(false);
@@ -515,7 +584,7 @@
             fileInput.value = '';
         }
 
-        // === FUNCIONES DE UI ===
+        // === FUNCIONES DE UI MEJORADAS ===
 
         function showLoading(loading) {
             isLoading = loading;
@@ -606,10 +675,12 @@
                         </div>
                         <div class="btn-group">
                             <button class="btn-edit" onclick="startEdit('${convo.id}')">✏️ Editar</button>
+                            <button class="btn-small" onclick="viewFile('${convo.id}')">👁️ Ver</button>
+                            <button class="btn-small" onclick="downloadFile('${convo.id}', '${convo.title}')">⬇️ Descargar</button>
                             <button class="btn-delete" onclick="deleteConversation('${convo.id}')">🗑️ Eliminar</button>
                         </div>
                     </div>
-                    <div class="conversation-content">${convo.content}</div>
+                    <div class="conversation-content">${convo.content.substring(0, 200)}${convo.content.length > 200 ? '...' : ''}</div>
                 </div>
             `).join('');
         }
@@ -617,33 +688,14 @@
         function viewFile(id) {
             const file = conversations.find(c => c.id === id);
             if (file) {
-                window.scrollTo(0, 0);
-                
-                let card = document.getElementById(`card-${id}`);
-                
-                if (!card) {
-                    const container = document.getElementById('conversations');
-                    card = document.createElement('div');
-                    card.id = `card-${id}`;
-                    container.insertBefore(card, container.firstChild);
-                }
-                
-                card.className = 'conversation-card';
-                card.innerHTML = `
-                    <div class="conversation-header">
-                        <div>
-                            <div class="conversation-title">📄 ${file.title}</div>
-                            <div class="conversation-meta">
-                                <span>📅 ${file.date}</span>
-                            </div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn-delete" onclick="deleteConversation('${file.id}')">🗑️ Eliminar</button>
-                        </div>
-                    </div>
-                    <div class="conversation-content">${file.content.substring(0, 5000)}</div>
-                `;
+                document.getElementById('modalTitle').textContent = file.title;
+                document.getElementById('modalContent').textContent = file.content;
+                document.getElementById('fileModal').style.display = 'flex';
             }
+        }
+
+        function closeModal() {
+            document.getElementById('fileModal').style.display = 'none';
         }
 
         function downloadFile(id, filename) {
@@ -672,6 +724,13 @@
 
             return text;
         }
+
+        // Cerrar modal al hacer clic fuera del contenido
+        document.getElementById('fileModal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                closeModal();
+            }
+        });
     </script>
 </body>
 </html>
