@@ -1,8 +1,8 @@
-﻿{
+{
   "name": "memoria-oscar",
   "version": "2.0.0",
   "scripts": {
-    "start": "cd backend && node server_completo.js"
+    "start": "cd backend && node server_production.js"
   },
   "engines": {
     "node": "18.x"
