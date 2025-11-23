@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -430,9 +431,15 @@
         let conversations = [];
         let isLoading = true;
 
+        // SOLUCIÓN: Esperar a que Firebase esté completamente inicializado
         window.addEventListener('load', () => {
-            console.log("Página cargada, cargando conversaciones...");
-            loadConversations();
+            console.log("Página cargada, esperando Firebase...");
+            
+            // Pequeño retraso para asegurar que Firebase esté listo
+            setTimeout(() => {
+                console.log("Iniciando carga de conversaciones...");
+                loadConversations();
+            }, 1000);
         });
 
         // === FUNCIONES MODIFICADAS PARA FIRESTORE ===
