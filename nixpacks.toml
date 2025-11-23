@@ -1,0 +1,11 @@
+﻿[phases.setup]
+cmds = ["echo 'Configurando Memoria Oscar...'"]
+
+[phases.install]
+cmds = ["npm install"]
+
+[phases.build]
+cmds = ["echo 'Build completado'"]
+
+[start]
+cmd = "npm start"

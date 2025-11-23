@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Memoria Oscar - Búsqueda Inteligente + Archivos</title>
+    <meta charset="UTF-8">
+    <style>
+        /* [Mantener todos los estilos anteriores...] */
+        
+        /* Nuevos estilos para archivos */
+        .seccion-archivos {
+            margin: 30px 0;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .lista-archivos {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .archivo-item {
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+        }
+        
+        .archivo-item:hover {
+            background: #e3f2fd;
+            border-color: #2196F3;
+            transform: translateY(-2px);
+        }
+        
+        .archivo-nombre {
+            font-weight: bold;
+            color: #2196F3;
+            margin-bottom: 5px;
+            word-break: break-word;
+        }
+        
+        .archivo-info {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 10px;
+        }
+        
+        .archivo-acciones {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .btn-archivo {
+            padding: 5px 10px;
+            background: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+            font-size: 12px;
+            transition: background 0.3s;
+        }
+        
+        .btn-archivo:hover {
+            background: #45a049;
+        }
+        
+        .btn-pdf {
+            background: #f44336;
+        }
+        
+        .btn-pdf:hover {
+            background: #d32f2f;
+        }
+        
+        .toggle-archivos {
+            background: #2196F3;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏠 Memoria Oscar - Búsqueda + Archivos</h1>
+    <p><em>Explora conversaciones y accede a los documentos originales</em></p>
+    
+    <!-- Búsqueda de sesiones -->
+    <div>
+        <input type="text" id="busqueda" placeholder="🔍 Buscar en nuestras conversaciones...">
+        <button onclick="buscarSesiones()">Buscar Sesiones</button>
+    </div>
+
+    <div id="resultados">
+        <p>Escribe un término arriba para encontrar sesiones de conversación relacionadas</p>
+    </div>
+
+    <!-- Sección de archivos -->
+    <div class="seccion-archivos">
+        <button class="toggle-archivos" onclick="toggleArchivos()">📁 Mostrar Archivos Originales</button>
+        <div id="listaArchivos" style="display: none;">
+            <h3>Archivos Importados</h3>
+            <div id="contenidoArchivos" class="lista-archivos">
+                <p>Cargando archivos...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal para sesión completa -->
+    <div id="modalSesion" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="cerrarModal()">&times;</span>
+            <h2 id="modalTitulo"></h2>
+            <div id="modalContenido"></div>
+        </div>
+    </div>
+
+    <script src="app_mejorado_con_archivos.js"></script>
+</body>
+</html>
