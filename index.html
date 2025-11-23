@@ -248,7 +248,7 @@
         <div class="conversations-list" id="conversations"></div>
 
         <footer>
-            <p>💾 Tus conversaciones se guardan automáticamente en la nube</p>
+            <p>💾 Tus conversaciones se guardan automáticamente en tu navegador</p>
         </footer>
     </div>
 
@@ -258,24 +258,16 @@
         // Cargar conversaciones al iniciar
         window.addEventListener('load', loadConversations);
 
-        async function loadConversations() {
-            try {
-                const result = await window.storage.get('conversations');
-                if (result) {
-                    conversations = JSON.parse(result.value);
-                    renderConversations();
-                }
-            } catch (error) {
-                console.log('Sin conversaciones guardadas aún');
+        function loadConversations() {
+            const stored = localStorage.getItem('conversaciones_ia');
+            if (stored) {
+                conversations = JSON.parse(stored);
+                renderConversations();
             }
         }
 
-        async function saveConversations() {
-            try {
-                await window.storage.set('conversations', JSON.stringify(conversations));
-            } catch (error) {
-                console.error('Error al guardar:', error);
-            }
+        function saveConversations() {
+            localStorage.setItem('conversaciones_ia', JSON.stringify(conversations));
         }
 
         function addConversation() {
