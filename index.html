@@ -334,7 +334,8 @@
         <div class="conversations-list" id="conversations"></div>
 
         <footer>
-            <p>💾 Tus conversaciones se guardan automáticamente en la nube</p>
+            <p>💾 Tus conversaciones se guardan en tu navegador (persisten entre sesiones)</p>
+            <p style="font-size: 0.85rem; color: #475569; margin-top: 0.5rem;">Para acceder desde otros dispositivos, descarga tus archivos</p>
         </footer>
     </div>
 
@@ -343,63 +344,30 @@
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
         
         let conversations = [];
-        const DB_URL = 'https://jsonbin.io/app/bins';
-        const BIN_ID = localStorage.getItem('binId');
 
         window.addEventListener('load', () => {
-            if (BIN_ID) {
-                loadConversations();
-            } else {
-                createBin();
-            }
+            loadConversations();
         });
 
-        async function createBin() {
-            try {
-                const response = await fetch('https://jsonbin.io/v3/b', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ conversaciones: [] })
-                });
-                const data = await response.json();
-                localStorage.setItem('binId', data.metadata.id);
-                conversations = [];
-                renderConversations();
-            } catch (error) {
-                console.error('Error creando bin:', error);
-                document.getElementById('conversations').innerHTML = '<div class="empty-state"><p>Error de conexión</p></div>';
+        function loadConversations() {
+            const stored = localStorage.getItem('conversaciones_ia_guardadas');
+            if (stored) {
+                try {
+                    conversations = JSON.parse(stored);
+                    renderConversations();
+                } catch (error) {
+                    console.error('Error cargando conversaciones:', error);
+                    conversations = [];
+                }
             }
         }
 
-        async function loadConversations() {
+        function saveConversations() {
             try {
-                document.getElementById('conversations').innerHTML = '<div class="loading">Cargando...</div>';
-                const response = await fetch(`https://jsonbin.io/v3/b/${BIN_ID}`, {
-                    headers: { 'X-Access-Key': '$2a$10$f3Ys51pZeJXvgUdPHHmfDu1LAkJuqr3d3lVGKr.j7RQ8AzMHjzVm.' }
-                });
-                const data = await response.json();
-                conversations = data.record.conversaciones || [];
-                renderConversations();
-            } catch (error) {
-                console.error('Error cargando conversaciones:', error);
-                document.getElementById('conversations').innerHTML = '<div class="empty-state"><p>Error al cargar las conversaciones</p></div>';
-            }
-        }
-
-        async function saveConversations() {
-            try {
-                await fetch(`https://jsonbin.io/v3/b/${BIN_ID}`, {
-                    method: 'PUT',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Access-Key': '$2a$10$f3Ys51pZeJXvgUdPHHmfDu1LAkJuqr3d3lVGKr.j7RQ8AzMHjzVm.'
-                    },
-                    body: JSON.stringify({ conversaciones: conversations })
-                });
+                localStorage.setItem('conversaciones_ia_guardadas', JSON.stringify(conversations));
             } catch (error) {
                 console.error('Error guardando:', error);
+                alert('No se pudo guardar. Tu navegador está lleno de datos.');
             }
         }
 
